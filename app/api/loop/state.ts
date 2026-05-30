@@ -6,6 +6,8 @@ export type ReceptiveState =
   | "practical"
   | "ambiguous";
 
+export type AmbiguityLevel = "low" | "medium" | "high";
+
 const seriousDistressSignals = [
   "my life is over",
   "it's over for me",
@@ -185,6 +187,59 @@ const negativeContrastSignals = [
   "overwhelmed"
 ];
 
+const highAmbiguityPhrases = [
+  "i don't know what to do",
+  "i dont know what to do",
+  "i don't know what's wrong",
+  "i dont know what's wrong",
+  "i don't know what is wrong",
+  "i dont know what is wrong",
+  "everything is complicated",
+  "everything's complicated",
+  "everythings complicated"
+];
+
+const broadAmbiguityDomains = [
+  "girlfriend",
+  "boyfriend",
+  "partner",
+  "relationship",
+  "friend",
+  "family",
+  "life",
+  "school",
+  "college",
+  "work",
+  "job",
+  "future"
+];
+
+const concreteSpecificitySignals = [
+  "hasn't replied",
+  "hasnt replied",
+  "didn't reply",
+  "didnt reply",
+  "conversation",
+  "email",
+  "avoiding",
+  "deadline",
+  "deadlines",
+  "tomorrow",
+  "today",
+  "yesterday",
+  "two days",
+  "three days",
+  "send",
+  "call",
+  "meeting",
+  "assignment",
+  "application",
+  "texted",
+  "said",
+  "asked",
+  "checking my phone"
+];
+
 function includesAny(input: string, signals: string[]) {
   return signals.some((signal) => input.includes(signal));
 }
@@ -197,6 +252,23 @@ function hasManyConcerns(input: string) {
 function hasLowDetail(input: string, wordCount: number) {
   const separators = input.match(/,|;|\band\b|\bor\b|\bthen\b/gi) ?? [];
   return wordCount <= 14 && separators.length <= 1;
+}
+
+function hasBroadDomain(input: string) {
+  return includesAny(input, broadAmbiguityDomains);
+}
+
+function hasConcreteSpecificity(input: string) {
+  return includesAny(input, concreteSpecificitySignals);
+}
+
+function hasUndefinedDecisionLanguage(input: string) {
+  return (
+    input.includes("i don't know what to do") ||
+    input.includes("i dont know what to do") ||
+    input.includes("what should i do") ||
+    input.includes("help me decide")
+  );
 }
 
 function hasPracticalIntent(input: string, hasPracticalSignal: boolean) {
@@ -315,6 +387,51 @@ export function detectReceptiveState(rawInput: string): ReceptiveState {
   }
 
   return "practical";
+}
+
+export function detectAmbiguityLevel(rawInput: string): AmbiguityLevel {
+  const input = rawInput.trim().toLowerCase();
+  const wordCount = input.split(/\s+/).filter(Boolean).length;
+  const hasQuestion = input.includes("?");
+  const lowDetail = hasLowDetail(input, wordCount);
+  const broadDomain = hasBroadDomain(input);
+  const undefinedDecision = hasUndefinedDecisionLanguage(input);
+  const concreteSpecificity = hasConcreteSpecificity(input);
+
+  if (!input) {
+    return "high";
+  }
+
+  if (
+    includesAny(input, highAmbiguityPhrases) &&
+    lowDetail &&
+    !concreteSpecificity
+  ) {
+    return "high";
+  }
+
+  if (
+    broadDomain &&
+    undefinedDecision &&
+    wordCount <= 16 &&
+    !concreteSpecificity
+  ) {
+    return "high";
+  }
+
+  if (broadDomain && lowDetail && !hasQuestion && !concreteSpecificity) {
+    return "high";
+  }
+
+  if (
+    (undefinedDecision || broadDomain) &&
+    wordCount <= 22 &&
+    !concreteSpecificity
+  ) {
+    return "medium";
+  }
+
+  return "low";
 }
 
 export function getRoutingInstruction(state: ReceptiveState) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "landing" | "loop";
 
@@ -14,6 +14,7 @@ type LoopResponse = {
     | "practical"
     | "ambiguous";
   responseShape: "one_line" | "compact" | "standard";
+  ambiguityLevel: "low" | "medium" | "high";
   confidence: "low" | "medium" | "high";
   whatsHappening: string;
   theLoop: string;
@@ -25,7 +26,11 @@ type LoopResponse = {
 
 type VisibleSectionKey = Exclude<
   keyof LoopResponse,
-  "inputClass" | "detectedState" | "responseShape" | "confidence"
+  | "inputClass"
+  | "detectedState"
+  | "responseShape"
+  | "ambiguityLevel"
+  | "confidence"
 >;
 
 const sections: Array<{ key: VisibleSectionKey; title: string }> = [
@@ -43,6 +48,22 @@ const compactSectionKeys: VisibleSectionKey[] = [
   "oneStabilizingMove",
   "reset"
 ];
+
+const promptExamples = [
+  "I have way too many things to do and I'm stressed.",
+  "I keep thinking about a conversation from three days ago.",
+  "I don't know what to do next.",
+  "I need to send one email and I've been avoiding it all day.",
+  "I can't stop checking my phone even though nothing is happening."
+];
+
+const tactileClickVolume = 0.11;
+const tactileClickBodyVolume = 0.04;
+const tactileClickNoiseAmount = 0.28;
+
+type WindowWithWebkitAudio = Window & typeof globalThis & {
+  webkitAudioContext?: typeof AudioContext;
+};
 
 function getOneLineResponse(response: LoopResponse) {
   return response.reset || response.oneStabilizingMove || response.whatsHappening;
@@ -67,6 +88,9 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(true);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   const hasResponse = useMemo(() => Boolean(response), [response]);
   const isLanding = mode === "landing";
@@ -74,12 +98,125 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
     ? "transition-opacity duration-500 ease-out"
     : "transition-none duration-0";
 
+  useEffect(() => {
+    if (input.length > 0 || mode !== "loop") {
+      setIsPlaceholderVisible(false);
+      return;
+    }
+
+    setIsPlaceholderVisible(true);
+
+    let fadeTimeout: number | undefined;
+    const rotationInterval = window.setInterval(() => {
+      setIsPlaceholderVisible(false);
+      fadeTimeout = window.setTimeout(() => {
+        setPlaceholderIndex((currentIndex) => (
+          currentIndex + 1
+        ) % promptExamples.length);
+        setIsPlaceholderVisible(true);
+      }, 240);
+    }, 7000);
+
+    return () => {
+      window.clearInterval(rotationInterval);
+      if (fadeTimeout) {
+        window.clearTimeout(fadeTimeout);
+      }
+    };
+  }, [input.length, mode]);
+
+  function playTactileClick() {
+    console.log("click sound fired");
+
+    try {
+      const AudioContextConstructor =
+        window.AudioContext ||
+        (window as WindowWithWebkitAudio).webkitAudioContext;
+
+      if (!AudioContextConstructor) {
+        return;
+      }
+
+      const audioContext =
+        audioContextRef.current ?? new AudioContextConstructor();
+      audioContextRef.current = audioContext;
+
+      void audioContext.resume().then(() => {
+        const startTime = audioContext.currentTime;
+        const output = audioContext.createGain();
+        output.gain.setValueAtTime(0.0001, startTime);
+        output.gain.exponentialRampToValueAtTime(
+          tactileClickVolume,
+          startTime + 0.004
+        );
+        output.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.055);
+        output.connect(audioContext.destination);
+
+        const noiseLength = Math.max(1, Math.floor(audioContext.sampleRate * 0.045));
+        const noiseBuffer = audioContext.createBuffer(
+          1,
+          noiseLength,
+          audioContext.sampleRate
+        );
+        const noiseData = noiseBuffer.getChannelData(0);
+
+        for (let index = 0; index < noiseLength; index += 1) {
+          const fade = 1 - index / noiseLength;
+          noiseData[index] = (Math.random() * 2 - 1) * fade * tactileClickNoiseAmount;
+        }
+
+        const noise = audioContext.createBufferSource();
+        noise.buffer = noiseBuffer;
+
+        const noiseFilter = audioContext.createBiquadFilter();
+        noiseFilter.type = "lowpass";
+        noiseFilter.frequency.setValueAtTime(720, startTime);
+        noiseFilter.Q.setValueAtTime(0.3, startTime);
+
+        const body = audioContext.createOscillator();
+        body.type = "sine";
+        body.frequency.setValueAtTime(110, startTime);
+        body.frequency.exponentialRampToValueAtTime(58, startTime + 0.045);
+
+        const bodyGain = audioContext.createGain();
+        bodyGain.gain.setValueAtTime(0.0001, startTime);
+        bodyGain.gain.exponentialRampToValueAtTime(
+          tactileClickBodyVolume,
+          startTime + 0.003
+        );
+        bodyGain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.055);
+
+        noise.connect(noiseFilter);
+        noiseFilter.connect(output);
+        body.connect(bodyGain);
+        bodyGain.connect(output);
+
+        noise.start(startTime);
+        noise.stop(startTime + 0.045);
+        body.start(startTime);
+        body.stop(startTime + 0.06);
+
+        window.setTimeout(() => {
+          noise.disconnect();
+          noiseFilter.disconnect();
+          body.disconnect();
+          bodyGain.disconnect();
+          output.disconnect();
+        }, 80);
+      }).catch(() => undefined);
+    } catch {
+      // Audio is decorative; button behavior should never depend on it.
+    }
+  }
+
   function openLoop() {
+    playTactileClick();
     setIsClosing(false);
     setMode("loop");
   }
 
   function closeLoop() {
+    playTactileClick();
     setIsClosing(true);
     setMode("landing");
     window.setTimeout(() => {
@@ -141,7 +278,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
           </p>
         </header>
 
-        <div className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-16">
+        <div className="landing-breath relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-16">
           <h1 className="text-7xl font-normal leading-none tracking-normal text-mist/90 sm:text-9xl">
             Hello.
           </h1>
@@ -149,7 +286,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
             <button
               type="button"
               onClick={openLoop}
-              className="rounded-full border border-white/10 px-8 py-4 text-2xl font-normal text-muted/75 transition-colors duration-200 hover:border-white/16 hover:text-mist/88 sm:text-3xl"
+              className="rounded-full border border-white/10 bg-white/[0.015] px-8 py-4 text-2xl font-normal text-muted/75 opacity-95 transition-[background-color,border-color,color,opacity] duration-200 ease-in-out hover:border-white/[0.18] hover:bg-[#ded8ce]/[0.045] hover:text-mist/90 hover:opacity-100 sm:text-3xl"
             >
               Continue
             </button>
@@ -188,8 +325,10 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
             <textarea
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="What's looping in your head right now?"
-              className="min-h-48 w-full resize-none rounded-xl border border-white/[0.055] bg-[#151413]/72 px-5 py-4 text-base font-normal leading-7 text-mist/86 outline-none transition-colors placeholder:text-muted/42 focus:border-white/[0.11] sm:min-h-56"
+              placeholder={promptExamples[placeholderIndex]}
+              className={`loop-prompt-input min-h-48 w-full resize-none rounded-xl border border-white/[0.055] bg-[#151413]/72 px-5 py-4 text-base font-normal leading-7 text-mist/86 outline-none transition-colors placeholder:text-muted/42 focus:border-white/[0.11] sm:min-h-56 ${
+                isPlaceholderVisible ? "" : "placeholder-fade-out"
+              }`}
             />
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -198,8 +337,9 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
               </p>
               <button
                 type="submit"
+                onClick={playTactileClick}
                 disabled={isLoading}
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/[0.08] bg-[#ded8ce] px-5 text-sm font-normal text-[#201d1a] transition-colors hover:bg-[#e6dfd4] disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/[0.08] bg-[#ded8ce] px-5 text-sm font-normal text-[#201d1a] transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-in-out hover:scale-[1.01] hover:border-white/[0.13] hover:bg-[#e6dfd4] hover:text-[#161310] hover:shadow-[0_10px_28px_rgba(222,216,206,0.08)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 disabled:hover:shadow-none"
               >
                 <span>{isLoading ? "Finding the shape..." : "Show me the loop"}</span>
               </button>
@@ -243,6 +383,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
                   <div className="space-y-1 border-t border-white/[0.04] pt-4 text-xs font-normal text-muted/48">
                     <p>Detected class: {response.inputClass}</p>
                     <p>Detected state: {response.detectedState}</p>
+                    <p>Ambiguity: {response.ambiguityLevel}</p>
                     <p>Response shape: {response.responseShape}</p>
                     <p>Confidence: {response.confidence}</p>
                   </div>
@@ -250,7 +391,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
                     <button
                       type="button"
                       onClick={closeLoop}
-                      className="rounded-full border border-white/[0.09] px-4 py-2 text-sm font-medium text-muted/68 transition-colors hover:border-white/[0.14] hover:text-mist/82"
+                      className="rounded-full border border-white/[0.09] bg-white/[0.01] px-4 py-2 text-sm font-medium text-muted/68 transition-colors duration-200 ease-in-out hover:border-white/[0.14] hover:bg-white/[0.035] hover:text-mist/82"
                     >
                       Close
                     </button>

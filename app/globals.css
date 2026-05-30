@@ -89,8 +89,57 @@ textarea {
   font: inherit;
 }
 
+.loop-prompt-input::placeholder {
+  opacity: 1;
+  transition: opacity 240ms ease;
+}
+
+.loop-prompt-input.placeholder-fade-out::placeholder {
+  opacity: 0;
+}
+
 .landing-surface {
   background-color: #171615;
+}
+
+.landing-surface::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      ellipse 98rem 72rem at 50% 48%,
+      rgba(222, 216, 206, 0.034) 0%,
+      rgba(222, 216, 206, 0.024) 28%,
+      rgba(190, 181, 168, 0.014) 52%,
+      rgba(23, 22, 21, 0.006) 74%,
+      rgba(23, 22, 21, 0) 100%
+    );
+}
+
+.landing-breath {
+  animation: landing-breath 10s ease-in-out infinite;
+  transform-origin: center;
+  will-change: transform;
+}
+
+@keyframes landing-breath {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.014);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-breath {
+    animation: none;
+  }
 }
 
 .landing-surface::before,
