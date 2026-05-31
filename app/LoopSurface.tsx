@@ -60,6 +60,7 @@ const promptExamples = [
 const tactileClickVolume = 0.11;
 const tactileClickBodyVolume = 0.04;
 const tactileClickNoiseAmount = 0.28;
+const localDebugHostnames = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 type WindowWithWebkitAudio = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
@@ -90,6 +91,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
   const [isClosing, setIsClosing] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(true);
+  const [showDebugFooter, setShowDebugFooter] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const hasResponse = useMemo(() => Boolean(response), [response]);
@@ -97,6 +99,10 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
   const layerTransition = isClosing
     ? "transition-opacity duration-500 ease-out"
     : "transition-none duration-0";
+
+  useEffect(() => {
+    setShowDebugFooter(localDebugHostnames.has(window.location.hostname));
+  }, []);
 
   useEffect(() => {
     if (input.length > 0 || mode !== "loop") {
@@ -380,13 +386,15 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
                       </article>
                     ))
                   )}
-                  <div className="space-y-1 border-t border-white/[0.04] pt-4 text-xs font-normal text-muted/48">
-                    <p>Detected class: {response.inputClass}</p>
-                    <p>Detected state: {response.detectedState}</p>
-                    <p>Ambiguity: {response.ambiguityLevel}</p>
-                    <p>Response shape: {response.responseShape}</p>
-                    <p>Confidence: {response.confidence}</p>
-                  </div>
+                  {showDebugFooter && (
+                    <div className="space-y-1 border-t border-white/[0.04] pt-4 text-xs font-normal text-muted/48">
+                      <p>Detected class: {response.inputClass}</p>
+                      <p>Detected state: {response.detectedState}</p>
+                      <p>Ambiguity: {response.ambiguityLevel}</p>
+                      <p>Response shape: {response.responseShape}</p>
+                      <p>Confidence: {response.confidence}</p>
+                    </div>
+                  )}
                   <div className="flex justify-center pt-1">
                     <button
                       type="button"
