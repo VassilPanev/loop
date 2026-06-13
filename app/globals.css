@@ -16,25 +16,25 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at 50% -10%, rgba(104, 127, 153, 0.18), transparent 36rem),
-    radial-gradient(circle at 8% 30%, rgba(78, 105, 128, 0.1), transparent 30rem),
-    radial-gradient(circle at 92% 72%, rgba(57, 76, 96, 0.12), transparent 34rem),
+    radial-gradient(circle at 50% -10%, rgba(164, 148, 126, 0.15), transparent 36rem),
+    radial-gradient(circle at 8% 30%, rgba(120, 103, 86, 0.08), transparent 30rem),
+    radial-gradient(circle at 92% 72%, rgba(88, 74, 62, 0.1), transparent 34rem),
     repeating-linear-gradient(
       90deg,
-      rgba(216, 229, 240, 0.014) 0,
-      rgba(216, 229, 240, 0.014) 1px,
+      rgba(232, 223, 208, 0.013) 0,
+      rgba(232, 223, 208, 0.013) 1px,
       transparent 1px,
       transparent 34px
     ),
     repeating-linear-gradient(
       0deg,
-      rgba(216, 229, 240, 0.01) 0,
-      rgba(216, 229, 240, 0.01) 1px,
+      rgba(232, 223, 208, 0.009) 0,
+      rgba(232, 223, 208, 0.009) 1px,
       transparent 1px,
       transparent 34px
     ),
-    #101720;
-  color: #e8eaf0;
+    #100d0b;
+  color: #e8dfd0;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -55,20 +55,20 @@ body::before {
       118deg,
       transparent 0%,
       transparent 34%,
-      rgba(188, 207, 224, 0.075) 34.3%,
-      rgba(188, 207, 224, 0.022) 34.9%,
+      rgba(203, 187, 164, 0.058) 34.3%,
+      rgba(203, 187, 164, 0.018) 34.9%,
       transparent 35.5%,
       transparent 63%,
-      rgba(188, 207, 224, 0.052) 63.3%,
-      rgba(188, 207, 224, 0.018) 63.9%,
+      rgba(203, 187, 164, 0.04) 63.3%,
+      rgba(203, 187, 164, 0.014) 63.9%,
       transparent 64.6%
     ),
     linear-gradient(
       28deg,
       transparent 0%,
       transparent 40%,
-      rgba(84, 111, 137, 0.085) 40.4%,
-      rgba(84, 111, 137, 0.02) 41.2%,
+      rgba(116, 98, 80, 0.07) 40.4%,
+      rgba(116, 98, 80, 0.016) 41.2%,
       transparent 42%,
       transparent 100%
     );
@@ -80,8 +80,8 @@ body::before {
 body::after {
   z-index: 0;
   background:
-    radial-gradient(ellipse at 50% 108%, rgba(164, 185, 204, 0.13), transparent 46%),
-    linear-gradient(to bottom, transparent 52%, rgba(4, 8, 14, 0.18) 100%);
+    radial-gradient(ellipse at 50% 108%, rgba(190, 173, 149, 0.11), transparent 46%),
+    linear-gradient(to bottom, transparent 52%, rgba(7, 5, 4, 0.2) 100%);
 }
 
 button,
@@ -99,7 +99,10 @@ textarea {
 }
 
 .landing-surface {
-  background-color: #171615;
+  background:
+    radial-gradient(ellipse 72rem 48rem at 50% 42%, rgba(232, 223, 208, 0.016), transparent 72%),
+    radial-gradient(ellipse 54rem 34rem at 50% 100%, rgba(195, 176, 151, 0.012), transparent 70%),
+    #120f0d;
 }
 
 .landing-surface::after {
@@ -109,13 +112,24 @@ textarea {
   z-index: 0;
   pointer-events: none;
   background:
+    linear-gradient(
+      to bottom,
+      rgba(18, 15, 13, 0.018) 0%,
+      rgba(18, 15, 13, 0) 34%,
+      rgba(7, 5, 4, 0.1) 100%
+    ),
     radial-gradient(
-      ellipse 98rem 72rem at 50% 48%,
-      rgba(222, 216, 206, 0.034) 0%,
-      rgba(222, 216, 206, 0.024) 28%,
-      rgba(190, 181, 168, 0.014) 52%,
-      rgba(23, 22, 21, 0.006) 74%,
-      rgba(23, 22, 21, 0) 100%
+      ellipse 96rem 70rem at 50% 46%,
+      rgba(232, 223, 208, 0.028) 0%,
+      rgba(232, 223, 208, 0.021) 30%,
+      rgba(195, 176, 151, 0.013) 54%,
+      rgba(18, 15, 13, 0.008) 76%,
+      rgba(18, 15, 13, 0) 100%
+    ),
+    radial-gradient(
+      ellipse 72rem 36rem at 50% 112%,
+      rgba(7, 5, 4, 0.12) 0%,
+      rgba(7, 5, 4, 0) 68%
     );
 }
 
@@ -123,6 +137,16 @@ textarea {
   animation: landing-breath 10s ease-in-out infinite;
   transform-origin: center;
   will-change: transform;
+}
+
+.loop-writing-box {
+  animation: loop-writing-breath 7s ease-in-out infinite;
+}
+
+.loop-writing-box:focus-within {
+  animation-play-state: paused;
+  border-color: rgba(232, 223, 208, 0.125);
+  box-shadow: 0 15px 44px rgba(9, 6, 4, 0.13);
 }
 
 @keyframes landing-breath {
@@ -136,8 +160,24 @@ textarea {
   }
 }
 
+@keyframes loop-writing-breath {
+  0%,
+  100% {
+    border-color: rgba(232, 223, 208, 0.065);
+    box-shadow: 0 12px 38px rgba(9, 6, 4, 0.115);
+    opacity: 0.98;
+  }
+
+  50% {
+    border-color: rgba(232, 223, 208, 0.125);
+    box-shadow: 0 18px 52px rgba(49, 36, 24, 0.17);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .landing-breath {
+  .landing-breath,
+  .loop-writing-box {
     animation: none;
   }
 }
@@ -149,15 +189,15 @@ textarea {
   inset: 0;
   z-index: 0;
   pointer-events: none;
-  opacity: 0.045;
+  opacity: 0.026;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
   background-size: 180px 180px;
 }
 
 .loop-surface {
-  background-color: #171615;
+  background-color: #120f0d;
 }
 
 .loop-surface::before {
-  opacity: 0.035;
+  opacity: 0.024;
 }

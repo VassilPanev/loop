@@ -8,15 +8,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        night: "#090A0F",
-        ink: "#11131B",
-        mist: "#D7D8E0",
-        muted: "#989DAE",
-        ember: "#E6B17E",
-        moss: "#7DBA9A"
+        night: "#100D0B",
+        ink: "#1A1511",
+        mist: "#E8DFD0",
+        muted: "#B3A695",
+        ember: "#C9B79F",
+        moss: "#9D9282"
       },
       boxShadow: {
-        glow: "0 0 48px rgba(230, 177, 126, 0.12)"
+        glow: "0 0 48px rgba(201, 183, 159, 0.13)"
       }
     }
   },

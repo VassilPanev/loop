@@ -442,15 +442,15 @@ export function getRoutingInstruction(state: ReceptiveState) {
 
   switch (state) {
     case "playful":
-      return `${schemaBoundary} ${compressionBoundary} The user likely has low real distress and is joking. responseShape should usually be one_line. The visible answer can often be one line: light, compressive, and free of overanalysis. If the existing inputClass is playful_joking, make reset the single line the UI should show.`;
+      return `${schemaBoundary} ${compressionBoundary} The user likely has low real distress and is joking. responseShape should usually be one_line. Keep all three required visible fields light, compressive, and free of overanalysis.`;
     case "low_bandwidth":
       return `${schemaBoundary} ${compressionBoundary} The user likely has very little processing capacity. responseShape should usually be compact. Keep every visible field short, simple, and grounding. Avoid abstraction, philosophy, and explanatory buildup, but include enough language to be clear and steady.`;
     case "overload":
-      return `${schemaBoundary} ${compressionBoundary} The user likely carries simultaneous concerns. responseShape should be compact for simple overload and standard for complex overload with many moving parts. Reduce simultaneity load, shrink the horizon, and offer one stabilizing move.`;
+      return `${schemaBoundary} ${compressionBoundary} The user likely carries simultaneous concerns. responseShape should be compact for simple overload and standard for complex overload with many moving parts. Name the simultaneity load and restore proportion without suggesting an action.`;
     case "reflective":
       return `${schemaBoundary} ${compressionBoundary} The user likely is thoughtful and stable. responseShape can be standard when nuance is useful, otherwise compact. Allow slight interpretation while staying concise. Avoid essay mode and over-insight.`;
     case "practical":
-      return `${schemaBoundary} ${compressionBoundary} The user likely wants concrete help. responseShape can be compact for simple requests and standard when logistics need more structure. Be concise but actionable, with enough specifics to be useful. Stay light on emotional interpretation.`;
+      return `${schemaBoundary} ${compressionBoundary} The user likely names a practical problem. responseShape can be compact for simple requests and standard when logistics need more structure. Be concise and concrete, but identify the structure without advising an action. Stay light on emotional interpretation.`;
     case "ambiguous":
       return `${schemaBoundary} ${compressionBoundary} The user's intent or seriousness is unclear. responseShape should usually be compact unless safety or complexity requires standard. Keep the response cautious and light, avoid certainty, avoid dismissiveness, and use minimal interpretation.`;
   }

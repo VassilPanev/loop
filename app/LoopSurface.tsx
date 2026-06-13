@@ -17,9 +17,6 @@ type LoopResponse = {
   ambiguityLevel: "low" | "medium" | "high";
   confidence: "low" | "medium" | "high";
   whatsHappening: string;
-  theLoop: string;
-  whatIsAddingLoad: string;
-  whatActuallyMattersNow: string;
   oneStabilizingMove: string;
   reset: string;
 };
@@ -35,18 +32,8 @@ type VisibleSectionKey = Exclude<
 
 const sections: Array<{ key: VisibleSectionKey; title: string }> = [
   { key: "whatsHappening", title: "What's Happening" },
-  { key: "theLoop", title: "The Loop" },
-  { key: "whatIsAddingLoad", title: "What Is Adding Load" },
-  { key: "whatActuallyMattersNow", title: "What Actually Matters Now" },
-  { key: "oneStabilizingMove", title: "One Stabilizing Move" },
+  { key: "oneStabilizingMove", title: "The Tragedy" },
   { key: "reset", title: "Reset" }
-];
-
-const compactSectionKeys: VisibleSectionKey[] = [
-  "whatsHappening",
-  "whatActuallyMattersNow",
-  "oneStabilizingMove",
-  "reset"
 ];
 
 const promptExamples = [
@@ -60,26 +47,26 @@ const promptExamples = [
 const tactileClickVolume = 0.11;
 const tactileClickBodyVolume = 0.04;
 const tactileClickNoiseAmount = 0.28;
-const localDebugHostnames = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
-
 type WindowWithWebkitAudio = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
 };
 
-function getOneLineResponse(response: LoopResponse) {
-  return response.reset || response.oneStabilizingMove || response.whatsHappening;
+function isLocalDebugHostname(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
 function getVisibleSections(response: LoopResponse) {
-  if (response.responseShape === "standard") {
-    return sections;
-  }
+  return sections.map((section) => ({
+    ...section,
+    text: getVisibleSectionText(response[section.key])
+  }));
+}
 
-  return sections.filter(
-    (section) =>
-      compactSectionKeys.includes(section.key) &&
-      response[section.key].trim().length > 0
-  );
+function getVisibleSectionText(text: string) {
+  const trimmedText = text.trim();
+  const sentenceMatch = trimmedText.match(/^.*?[.!?](?:\s|$)/);
+
+  return sentenceMatch ? sentenceMatch[0].trim() : trimmedText;
 }
 
 export default function LoopSurface({ initialMode = "landing" }: { initialMode?: Mode }) {
@@ -91,7 +78,8 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
   const [isClosing, setIsClosing] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(true);
-  const [showDebugFooter, setShowDebugFooter] = useState(false);
+  const [isLocalDebugMode, setIsLocalDebugMode] = useState(false);
+  const [currentHostname, setCurrentHostname] = useState("");
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const hasResponse = useMemo(() => Boolean(response), [response]);
@@ -101,12 +89,14 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
     : "transition-none duration-0";
 
   useEffect(() => {
-    setShowDebugFooter(localDebugHostnames.has(window.location.hostname));
+    const hostname = window.location.hostname;
+    setCurrentHostname(hostname);
+    setIsLocalDebugMode(isLocalDebugHostname(hostname));
   }, []);
 
   useEffect(() => {
     if (input.length > 0 || mode !== "loop") {
-      setIsPlaceholderVisible(false);
+      setIsPlaceholderVisible(input.length === 0 && mode === "loop");
       return;
     }
 
@@ -271,6 +261,15 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
 
   return (
     <main className="landing-surface relative z-10 min-h-screen overflow-hidden text-center">
+      {isLocalDebugMode && (
+        <div className="fixed left-3 top-3 z-[9999] space-y-0.5 bg-[#120f0d]/88 px-2 py-1 text-left text-[10px] font-normal uppercase leading-4 tracking-[0.08em] text-mist/78">
+          <p>LOCAL DEBUG {isLocalDebugMode ? "TRUE" : "FALSE"}</p>
+          <p className="normal-case tracking-normal">hostname: {currentHostname}</p>
+          <p className="normal-case tracking-normal">
+            response: {hasResponse ? "yes" : "no"}
+          </p>
+        </div>
+      )}
       <div className="min-h-screen" aria-hidden="true" />
       <section
         aria-hidden={!isLanding}
@@ -286,18 +285,18 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
 
         <div className="landing-breath relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-16">
           <h1 className="text-7xl font-normal leading-none tracking-normal text-mist/90 sm:text-9xl">
-            Hello.
+            Name the tragedy.
           </h1>
           <div className="flex flex-col items-center gap-4">
             <button
               type="button"
               onClick={openLoop}
-              className="rounded-full border border-white/10 bg-white/[0.015] px-8 py-4 text-2xl font-normal text-muted/75 opacity-95 transition-[background-color,border-color,color,opacity] duration-200 ease-in-out hover:border-white/[0.18] hover:bg-[#ded8ce]/[0.045] hover:text-mist/90 hover:opacity-100 sm:text-3xl"
+              className="rounded-full border border-[#e8dfd0]/10 bg-[#e8dfd0]/[0.018] px-8 py-4 text-2xl font-normal text-muted/75 opacity-95 transition-[background-color,border-color,color,opacity] duration-200 ease-in-out hover:border-[#e8dfd0]/20 hover:bg-[#e8dfd0]/[0.052] hover:text-mist/90 hover:opacity-100 sm:text-3xl"
             >
-              Continue
+              Show me the loop
             </button>
             <p className="whitespace-pre-line text-xs font-light italic leading-5 text-muted/30">
-              &ldquo;Touch grass.{"\n"}Continue your day.&rdquo;
+              Continue your day.
             </p>
           </div>
         </div>
@@ -318,34 +317,37 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
               <h1 className="text-3xl font-normal italic leading-tight tracking-normal text-mist/88 sm:text-5xl">
                 Name the tragedy.
               </h1>
-              <p className="max-w-xl text-base font-normal italic leading-7 text-muted/72 sm:text-lg">
-                Continue your day.
-              </p>
             </div>
           </section>
 
           <form
             onSubmit={handleSubmit}
-            className="rounded-2xl border border-white/[0.055] bg-[#1c1a18]/62 p-3 sm:p-4"
+            className="loop-writing-box rounded-2xl border border-[#e8dfd0]/[0.065] bg-[#1a1511]/62 p-3 sm:p-4"
           >
             <textarea
+              id="loop-prompt"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder={promptExamples[placeholderIndex]}
-              className={`loop-prompt-input min-h-48 w-full resize-none rounded-xl border border-white/[0.055] bg-[#151413]/72 px-5 py-4 text-base font-normal leading-7 text-mist/86 outline-none transition-colors placeholder:text-muted/42 focus:border-white/[0.11] sm:min-h-56 ${
-                isPlaceholderVisible ? "" : "placeholder-fade-out"
-              }`}
+              className="min-h-48 w-full cursor-text resize-none rounded-xl border border-[#e8dfd0]/[0.13] bg-[#120f0d]/80 px-5 py-4 text-base font-normal leading-7 text-mist/86 caret-[#e8dfd0] outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-in-out hover:border-[#e8dfd0]/[0.18] hover:bg-[#15110e]/84 focus:border-[#e8dfd0]/45 focus:bg-[#15110e]/88 focus:shadow-[0_0_0_1px_rgba(232,223,208,0.075)] sm:min-h-56"
             />
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="min-h-6 text-sm font-normal text-[#c4a184]/72">
+            <p
+              className={`mt-3 min-h-5 px-2 text-xs font-normal leading-5 text-muted/34 transition-opacity duration-300 ease-in-out ${
+                isPlaceholderVisible ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              &ldquo;{promptExamples[placeholderIndex]}&rdquo;
+            </p>
+
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="min-h-6 text-sm font-normal text-[#c4b39c]/72">
                 {error}
               </p>
               <button
                 type="submit"
                 onClick={playTactileClick}
                 disabled={isLoading}
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-white/[0.08] bg-[#ded8ce] px-5 text-sm font-normal text-[#201d1a] transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-in-out hover:scale-[1.01] hover:border-white/[0.13] hover:bg-[#e6dfd4] hover:text-[#161310] hover:shadow-[0_10px_28px_rgba(222,216,206,0.08)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 disabled:hover:shadow-none"
+                className="inline-flex min-h-11 items-center justify-center rounded-full border border-[#e8dfd0]/[0.1] bg-[#e8dfd0] px-5 text-sm font-normal text-[#1a1511] transition-[background-color,border-color,color,box-shadow,transform] duration-200 ease-in-out hover:scale-[1.01] hover:border-[#e8dfd0]/[0.16] hover:bg-[#f0e6d6] hover:text-[#120f0d] hover:shadow-[0_10px_28px_rgba(232,223,208,0.08)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100 disabled:hover:shadow-none"
               >
                 <span>{isLoading ? "Finding the shape..." : "Show me the loop"}</span>
               </button>
@@ -353,41 +355,38 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
           </form>
 
           {(isLoading || hasResponse) && (
-            <section className="rounded-2xl border border-white/[0.052] bg-[#1c1a18]/50 p-5 sm:p-6">
+            <section className="rounded-2xl border border-[#e8dfd0]/[0.058] bg-[#1a1511]/54 p-5 sm:p-6">
               {isLoading && (
                 <div className="space-y-4">
-                  <div className="h-4 w-32 animate-pulse rounded-full bg-white/[0.07]" />
+                  <div className="h-4 w-32 animate-pulse rounded-full bg-[#e8dfd0]/[0.075]" />
                   <div className="space-y-3">
-                    <div className="h-3 w-full animate-pulse rounded-full bg-white/[0.045]" />
-                    <div className="h-3 w-5/6 animate-pulse rounded-full bg-white/[0.045]" />
-                    <div className="h-3 w-2/3 animate-pulse rounded-full bg-white/[0.045]" />
+                    <div className="h-3 w-full animate-pulse rounded-full bg-[#e8dfd0]/[0.048]" />
+                    <div className="h-3 w-5/6 animate-pulse rounded-full bg-[#e8dfd0]/[0.048]" />
+                    <div className="h-3 w-2/3 animate-pulse rounded-full bg-[#e8dfd0]/[0.048]" />
                   </div>
                 </div>
               )}
 
               {response && (
                 <div className="space-y-5">
-                  {response.responseShape === "one_line" ? (
-                    <p className="text-base leading-7 text-mist/90">
-                      {getOneLineResponse(response)}
-                    </p>
-                  ) : (
-                    getVisibleSections(response).map((section) => (
-                      <article
-                        key={section.key}
-                        className="space-y-1.5 border-t border-white/[0.045] pt-4 first:border-t-0 first:pt-0"
-                      >
-                        <h2 className="text-xs font-normal uppercase tracking-[0.13em] text-muted/54">
-                          {section.title}
-                        </h2>
-                        <p className="text-base font-normal leading-7 text-mist/82">
-                          {response[section.key]}
-                        </p>
-                      </article>
-                    ))
-                  )}
-                  {showDebugFooter && (
-                    <div className="space-y-1 border-t border-white/[0.04] pt-4 text-xs font-normal text-muted/48">
+                  {getVisibleSections(response).map((section) => (
+                    <article
+                      key={section.key}
+                      className="space-y-1.5 border-t border-[#e8dfd0]/[0.05] pt-4 first:border-t-0 first:pt-0"
+                    >
+                      <h2 className="text-xs font-normal uppercase tracking-[0.13em] text-muted/54">
+                        {section.title}
+                      </h2>
+                      <p className="text-base font-normal leading-7 text-mist/82">
+                        {section.text}
+                      </p>
+                    </article>
+                  ))}
+                  {isLocalDebugMode && (
+                    <div className="space-y-1 border-t border-[#e8dfd0]/[0.085] pt-4 text-xs font-normal text-muted/70">
+                      <p className="uppercase tracking-[0.12em] text-mist/72">
+                        LOCAL DEBUG MODE
+                      </p>
                       <p>Detected class: {response.inputClass}</p>
                       <p>Detected state: {response.detectedState}</p>
                       <p>Ambiguity: {response.ambiguityLevel}</p>
@@ -399,7 +398,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
                     <button
                       type="button"
                       onClick={closeLoop}
-                      className="rounded-full border border-white/[0.09] bg-white/[0.01] px-4 py-2 text-sm font-medium text-muted/68 transition-colors duration-200 ease-in-out hover:border-white/[0.14] hover:bg-white/[0.035] hover:text-mist/82"
+                      className="rounded-full border border-[#e8dfd0]/[0.14] bg-[#e8dfd0]/[0.03] px-6 py-2.5 text-sm font-medium text-muted/78 transition-[background-color,border-color,color,box-shadow] duration-200 ease-in-out hover:border-[#e8dfd0]/[0.22] hover:bg-[#e8dfd0]/[0.07] hover:text-mist/90 hover:shadow-[0_10px_28px_rgba(0,0,0,0.16)] focus-visible:border-[#e8dfd0]/40 focus-visible:bg-[#e8dfd0]/[0.08] focus-visible:text-mist/92 focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_rgba(232,223,208,0.13),0_10px_28px_rgba(0,0,0,0.18)]"
                     >
                       Close
                     </button>
