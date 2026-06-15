@@ -332,11 +332,17 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
             />
 
             <p
-              className={`mt-3 min-h-5 px-2 text-xs font-normal leading-5 text-muted/34 transition-opacity duration-300 ease-in-out ${
+              className={`mt-3 min-h-5 px-2 text-sm font-normal leading-5 text-muted/34 transition-opacity duration-300 ease-in-out ${
                 isPlaceholderVisible ? "opacity-100" : "opacity-0"
               }`}
             >
               &ldquo;{promptExamples[placeholderIndex]}&rdquo;
+            </p>
+
+            <p className="mx-2 mt-4 border-t border-[#e8dfd0]/[0.045] pt-3 text-[11px] font-light leading-4 text-muted/30 sm:text-xs">
+              Anonymous prompts are stored and reviewed to improve Loop.
+              <br />
+              Please do not include personal identifying information.
             </p>
 
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

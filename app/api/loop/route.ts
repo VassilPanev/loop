@@ -282,6 +282,110 @@ function shapeResponse(
   };
 }
 
+type ShapedResponse = ReturnType<typeof shapeResponse>;
+
+function truncateDiscordField(value: string) {
+  return value.length > 1024 ? `${value.slice(0, 1021)}...` : value;
+}
+
+async function logSubmissionToDiscord(
+  prompt: string,
+  response: ShapedResponse
+) {
+  const webhookUrl = process.env.LOOP_DISCORD_WEBHOOK_URL;
+  console.log(`Discord webhook configured: ${webhookUrl ? "yes" : "no"}`);
+
+  if (!webhookUrl) {
+    return;
+  }
+
+  const timestamp = new Date().toISOString();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    console.log("Discord webhook send attempted");
+
+    const discordResponse = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        allowed_mentions: { parse: [] },
+        embeds: [
+          {
+            title: "Loop submission",
+            timestamp,
+            fields: [
+              {
+                name: "Timestamp",
+                value: timestamp
+              },
+              {
+                name: "Prompt",
+                value: truncateDiscordField(prompt)
+              },
+              {
+                name: "What's Happening",
+                value: truncateDiscordField(response.whatsHappening)
+              },
+              {
+                name: "The Tragedy",
+                value: truncateDiscordField(response.oneStabilizingMove)
+              },
+              {
+                name: "Reset",
+                value: truncateDiscordField(response.reset)
+              },
+              {
+                name: "inputClass",
+                value: String(response.inputClass),
+                inline: true
+              },
+              {
+                name: "detectedState",
+                value: response.detectedState,
+                inline: true
+              },
+              {
+                name: "ambiguityLevel",
+                value: response.ambiguityLevel,
+                inline: true
+              },
+              {
+                name: "responseShape",
+                value: String(response.responseShape),
+                inline: true
+              },
+              {
+                name: "confidence",
+                value: String(response.confidence),
+                inline: true
+              }
+            ]
+          }
+        ]
+      }),
+      signal: controller.signal
+    });
+
+    console.log(`Discord webhook response status: ${discordResponse.status}`);
+
+    if (!discordResponse.ok) {
+      console.error(
+        `Discord webhook failed with status ${discordResponse.status}`
+      );
+    }
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown webhook error";
+    console.error(`Discord webhook error: ${errorMessage}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { input } = (await request.json()) as { input?: string };
@@ -302,15 +406,19 @@ export async function POST(request: Request) {
     const ambiguityLevel = detectAmbiguityLevel(trimmedInput);
 
     if (ambiguityLevel === "high") {
+      const response = shapeResponse({
+        inputClass: "ambiguous_unclear",
+        confidence: "low",
+        responseShape: "compact",
+        whatsHappening: "The problem has not fully arrived yet.",
+        oneStabilizingMove: "The missing piece is the actual question.",
+        reset: "The answer cannot arrive before the question."
+      }, detectedState, ambiguityLevel);
+
+      await logSubmissionToDiscord(trimmedInput, response);
+
       return NextResponse.json({
-        response: shapeResponse({
-          inputClass: "ambiguous_unclear",
-          confidence: "low",
-          responseShape: "compact",
-          whatsHappening: "The problem has not fully arrived yet.",
-          oneStabilizingMove: "The missing piece is the actual question.",
-          reset: "The answer cannot arrive before the question."
-        }, detectedState, ambiguityLevel)
+        response
       });
     }
 
@@ -390,9 +498,16 @@ export async function POST(request: Request) {
     }
 
     const parsedResponse = JSON.parse(content) as Record<string, unknown>;
+    const response = shapeResponse(
+      parsedResponse,
+      detectedState,
+      ambiguityLevel
+    );
+
+    await logSubmissionToDiscord(trimmedInput, response);
 
     return NextResponse.json({
-      response: shapeResponse(parsedResponse, detectedState, ambiguityLevel)
+      response
     });
   } catch (error) {
     console.error(error);

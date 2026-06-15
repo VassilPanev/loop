@@ -1,10 +1,11 @@
 
 > loop-ai-mvp@0.1.0 start
-> next start -H 127.0.0.1 -p 3100
+> next start -H 127.0.0.1 -p 3102
 
    ▲ Next.js 15.5.18
-   - Local:        http://127.0.0.1:3100
-   - Network:      http://127.0.0.1:3100
+   - Local:        http://127.0.0.1:3102
+   - Network:      http://127.0.0.1:3102
 
  ✓ Starting...
- ✓ Ready in 1968ms
+ ✓ Ready in 4.8s
+Discord webhook configured: no
