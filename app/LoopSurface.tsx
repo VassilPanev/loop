@@ -284,9 +284,14 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
         </header>
 
         <div className="landing-breath relative z-10 flex flex-1 flex-col items-center justify-center gap-8 pb-16">
-          <h1 className="text-7xl font-normal leading-none tracking-normal text-mist/90 sm:text-9xl">
-            Name the tragedy.
-          </h1>
+          <div className="flex flex-col items-center gap-3">
+            <h1 className="text-7xl font-normal leading-none tracking-normal text-mist/90 sm:text-9xl">
+              Name the tragedy.
+            </h1>
+            <span className="landing-subtitle-type text-sm font-light leading-5 text-muted/42 sm:text-base">
+              <span>For thoughts that won&apos;t close</span>
+            </span>
+          </div>
           <div className="flex flex-col items-center gap-4">
             <button
               type="button"
@@ -361,7 +366,13 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
           </form>
 
           {(isLoading || hasResponse) && (
-            <section className="rounded-2xl border border-[#e8dfd0]/[0.058] bg-[#1a1511]/54 p-5 sm:p-6">
+            <section
+              className={`rounded-2xl border border-[#e8dfd0]/[0.058] bg-[#1a1511]/54 p-5 transition-[opacity,transform,filter] duration-500 ease-out sm:p-6 ${
+                isClosing
+                  ? "scale-[0.972] opacity-15 blur-[0.45px]"
+                  : "scale-100 opacity-100 blur-0"
+              }`}
+            >
               {isLoading && (
                 <div className="space-y-4">
                   <div className="h-4 w-32 animate-pulse rounded-full bg-[#e8dfd0]/[0.075]" />

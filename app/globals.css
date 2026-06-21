@@ -139,6 +139,20 @@ textarea {
   will-change: transform;
 }
 
+.landing-subtitle-type {
+  display: inline-block;
+  width: 27ch;
+  text-align: center;
+}
+
+.landing-subtitle-type > span {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  animation: landing-subtitle-type 880ms steps(30, end) 180ms both;
+}
+
 .loop-writing-box {
   animation: loop-writing-breath 7s ease-in-out infinite;
 }
@@ -160,6 +174,16 @@ textarea {
   }
 }
 
+@keyframes landing-subtitle-type {
+  from {
+    max-width: 0;
+  }
+
+  to {
+    max-width: 29ch;
+  }
+}
+
 @keyframes loop-writing-breath {
   0%,
   100% {
@@ -177,8 +201,13 @@ textarea {
 
 @media (prefers-reduced-motion: reduce) {
   .landing-breath,
-  .loop-writing-box {
+  .loop-writing-box,
+  .landing-subtitle-type > span {
     animation: none;
+  }
+
+  .landing-subtitle-type > span {
+    max-width: 29ch;
   }
 }
 
