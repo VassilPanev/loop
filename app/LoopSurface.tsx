@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Mode = "landing" | "loop";
+type VisualMode = "current" | "infrastructure";
 
 type LoopResponse = {
   inputClass: string;
@@ -47,6 +48,7 @@ const promptExamples = [
 const tactileClickVolume = 0.11;
 const tactileClickBodyVolume = 0.04;
 const tactileClickNoiseAmount = 0.28;
+const visualModeStorageKey = "loop-visual-mode";
 type WindowWithWebkitAudio = Window & typeof globalThis & {
   webkitAudioContext?: typeof AudioContext;
 };
@@ -71,16 +73,20 @@ function getVisibleSectionText(text: string) {
 
 export default function LoopSurface({ initialMode = "landing" }: { initialMode?: Mode }) {
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [visualMode, setVisualMode] = useState<VisualMode>("current");
   const [input, setInput] = useState("");
   const [response, setResponse] = useState<LoopResponse | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [dismissedSections, setDismissedSections] = useState<VisibleSectionKey[]>([]);
+  const [dismissingSections, setDismissingSections] = useState<VisibleSectionKey[]>([]);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isPlaceholderVisible, setIsPlaceholderVisible] = useState(true);
   const [isLocalDebugMode, setIsLocalDebugMode] = useState(false);
   const [currentHostname, setCurrentHostname] = useState("");
   const audioContextRef = useRef<AudioContext | null>(null);
+  const closeLoopRef = useRef<() => void>(() => undefined);
 
   const hasResponse = useMemo(() => Boolean(response), [response]);
   const isLanding = mode === "landing";
@@ -92,7 +98,28 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
     const hostname = window.location.hostname;
     setCurrentHostname(hostname);
     setIsLocalDebugMode(isLocalDebugHostname(hostname));
+
+    try {
+      setVisualMode(
+        window.localStorage.getItem(visualModeStorageKey) === "infrastructure"
+          ? "infrastructure"
+          : "current"
+      );
+    } catch {
+      // TEMPORARY INFRASTRUCTURE MODE: persistence is optional.
+    }
   }, []);
+
+  function toggleVisualMode() {
+    const nextVisualMode = visualMode === "current" ? "infrastructure" : "current";
+    setVisualMode(nextVisualMode);
+
+    try {
+      window.localStorage.setItem(visualModeStorageKey, nextVisualMode);
+    } catch {
+      // TEMPORARY INFRASTRUCTURE MODE: persistence is optional.
+    }
+  }
 
   useEffect(() => {
     if (input.length > 0 || mode !== "loop") {
@@ -120,6 +147,21 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
       }
     };
   }, [input.length, mode]);
+
+  useEffect(() => {
+    if (
+      visualMode === "infrastructure" &&
+      response &&
+      dismissedSections.length === sections.length &&
+      !isClosing
+    ) {
+      const closeTimeout = window.setTimeout(() => {
+        closeLoopRef.current();
+      }, 260);
+
+      return () => window.clearTimeout(closeTimeout);
+    }
+  }, [dismissedSections.length, isClosing, response, visualMode]);
 
   function playTactileClick() {
     console.log("click sound fired");
@@ -220,8 +262,29 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
       setResponse(null);
       setError("");
       setIsLoading(false);
+      setDismissedSections([]);
+      setDismissingSections([]);
       setIsClosing(false);
     }, 520);
+  }
+
+  closeLoopRef.current = closeLoop;
+
+  function dismissSection(sectionKey: VisibleSectionKey) {
+    if (dismissingSections.includes(sectionKey) || dismissedSections.includes(sectionKey)) {
+      return;
+    }
+
+    setDismissingSections((currentSections) => [...currentSections, sectionKey]);
+
+    window.setTimeout(() => {
+      setDismissedSections((currentSections) => [...currentSections, sectionKey]);
+      setDismissingSections((currentSections) => currentSections.filter((key) => key !== sectionKey));
+    }, visualMode === "infrastructure"
+      ? dismissedSections.length === sections.length - 1
+        ? 300
+        : 220
+      : 360);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -236,6 +299,8 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
 
     setIsLoading(true);
     setResponse(null);
+    setDismissedSections([]);
+    setDismissingSections([]);
 
     try {
       const result = await fetch("/api/loop", {
@@ -260,7 +325,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
   }
 
   return (
-    <main className="landing-surface relative z-10 min-h-screen overflow-hidden text-center">
+    <main className={`landing-surface relative z-10 min-h-screen overflow-hidden text-center ${visualMode === "infrastructure" ? "infrastructure-mode" : ""}`}>
       {isLocalDebugMode && (
         <div className="fixed left-3 top-3 z-[9999] space-y-0.5 bg-[#120f0d]/88 px-2 py-1 text-left text-[10px] font-normal uppercase leading-4 tracking-[0.08em] text-mist/78">
           <p>LOCAL DEBUG {isLocalDebugMode ? "TRUE" : "FALSE"}</p>
@@ -270,6 +335,13 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
           </p>
         </div>
       )}
+      <button
+        type="button"
+        onClick={toggleVisualMode}
+        className="infrastructure-toggle fixed bottom-4 right-4 z-[9999] rounded border border-[#e8dfd0]/15 bg-[#120f0d]/70 px-2.5 py-1.5 text-[11px] font-normal text-muted/60 transition-[background-color,border-color,color] duration-200 hover:border-[#e8dfd0]/30 hover:text-mist/90"
+      >
+        {visualMode === "current" ? "Infrastructure" : "Current"}
+      </button>
       <div className="min-h-screen" aria-hidden="true" />
       <section
         aria-hidden={!isLanding}
@@ -385,20 +457,63 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
               )}
 
               {response && (
-                <div className="space-y-5">
-                  {getVisibleSections(response).map((section) => (
+                <div
+                  className={`flex flex-col gap-5 ${
+                    visualMode === "infrastructure" ? "infrastructure-response-stack" : ""
+                  }`}
+                >
+                  {getVisibleSections(response)
+                    .filter((section) => !dismissedSections.includes(section.key))
+                    .map((section, sectionIndex) => {
+                      const isDismissing = dismissingSections.includes(section.key);
+                      const isTopInfrastructureSheet =
+                        visualMode !== "infrastructure" || sectionIndex === 0;
+                      const isFinalInfrastructureRelease =
+                        visualMode === "infrastructure" &&
+                        dismissedSections.length === sections.length - 1;
+                      const hasInfrastructureReleaseCue =
+                        visualMode === "infrastructure" &&
+                        section.key === "whatsHappening" &&
+                        !isDismissing;
+
+                      return (
                     <article
                       key={section.key}
-                      className="space-y-1.5 border-t border-[#e8dfd0]/[0.05] pt-4 first:border-t-0 first:pt-0"
+                      role={isTopInfrastructureSheet ? "button" : undefined}
+                      aria-hidden={visualMode === "infrastructure" && !isTopInfrastructureSheet ? true : undefined}
+                      tabIndex={isTopInfrastructureSheet ? 0 : -1}
+                      onClick={() => {
+                        if (isTopInfrastructureSheet) {
+                          dismissSection(section.key);
+                        }
+                      }}
+                      onKeyDown={(event) => {
+                        if (isTopInfrastructureSheet && (event.key === "Enter" || event.key === " ")) {
+                          event.preventDefault();
+                          dismissSection(section.key);
+                        }
+                      }}
+                      className={
+                        isDismissing
+                          ? visualMode === "infrastructure"
+                            ? isFinalInfrastructureRelease
+                              ? "infrastructure-response-slip infrastructure-slip-releasing overflow-hidden -mb-5 max-h-0 -translate-y-10 rounded-xl border border-transparent opacity-0 transition-[max-height,margin,opacity,transform,border-color] duration-300 ease-out"
+                              : "infrastructure-response-slip infrastructure-slip-releasing overflow-hidden -mb-5 max-h-0 -translate-y-8 rounded-xl border border-transparent opacity-0 transition-[max-height,margin,opacity,transform,border-color] duration-[220ms] ease-out"
+                            : "overflow-hidden -mb-5 max-h-0 -translate-y-1 rounded-xl border border-transparent opacity-0 transition-[max-height,margin,opacity,transform,border-color] duration-[360ms] ease-out"
+                          : `cursor-pointer overflow-hidden max-h-96 translate-y-0 rounded-xl border border-[#e8dfd0]/[0.09] px-4 py-4 opacity-100 transition-[max-height,margin,opacity,transform,border-color,background-color] duration-[360ms] ease-out hover:border-[#e8dfd0]/[0.17] hover:bg-[#e8dfd0]/[0.018] focus-visible:border-[#e8dfd0]/25 focus-visible:bg-[#e8dfd0]/[0.025] focus-visible:outline-none ${visualMode === "infrastructure" ? "infrastructure-response-slip" : ""} ${visualMode === "infrastructure" && !isTopInfrastructureSheet ? "infrastructure-slip-under" : ""} ${hasInfrastructureReleaseCue ? "infrastructure-release-cue" : ""}`
+                      }
                     >
-                      <h2 className="text-xs font-normal uppercase tracking-[0.13em] text-muted/54">
-                        {section.title}
-                      </h2>
-                      <p className="text-base font-normal leading-7 text-mist/82">
-                        {section.text}
-                      </p>
+                      <div className="space-y-1.5">
+                        <h2 className="text-xs font-normal uppercase tracking-[0.13em] text-muted/54">
+                          {section.title}
+                        </h2>
+                        <p className="text-base font-normal leading-7 text-mist/82">
+                          {section.text}
+                        </p>
+                      </div>
                     </article>
-                  ))}
+                      );
+                    })}
                   {isLocalDebugMode && (
                     <div className="space-y-1 border-t border-[#e8dfd0]/[0.085] pt-4 text-xs font-normal text-muted/70">
                       <p className="uppercase tracking-[0.12em] text-mist/72">
@@ -411,15 +526,17 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
                       <p>Confidence: {response.confidence}</p>
                     </div>
                   )}
-                  <div className="flex justify-center pt-1">
-                    <button
-                      type="button"
-                      onClick={closeLoop}
-                      className="rounded-full border border-[#e8dfd0]/[0.14] bg-[#e8dfd0]/[0.03] px-6 py-2.5 text-sm font-medium text-muted/78 transition-[background-color,border-color,color,box-shadow] duration-200 ease-in-out hover:border-[#e8dfd0]/[0.22] hover:bg-[#e8dfd0]/[0.07] hover:text-mist/90 hover:shadow-[0_10px_28px_rgba(0,0,0,0.16)] focus-visible:border-[#e8dfd0]/40 focus-visible:bg-[#e8dfd0]/[0.08] focus-visible:text-mist/92 focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_rgba(232,223,208,0.13),0_10px_28px_rgba(0,0,0,0.18)]"
-                    >
-                      Close
-                    </button>
-                  </div>
+                  {visualMode === "current" && (
+                    <div className="flex justify-center pt-1">
+                      <button
+                        type="button"
+                        onClick={closeLoop}
+                        className="rounded-full border border-[#e8dfd0]/[0.14] bg-[#e8dfd0]/[0.03] px-6 py-2.5 text-sm font-medium text-muted/78 transition-[background-color,border-color,color,box-shadow] duration-200 ease-in-out hover:border-[#e8dfd0]/[0.22] hover:bg-[#e8dfd0]/[0.07] hover:text-mist/90 hover:shadow-[0_10px_28px_rgba(0,0,0,0.16)] focus-visible:border-[#e8dfd0]/40 focus-visible:bg-[#e8dfd0]/[0.08] focus-visible:text-mist/92 focus-visible:outline-none focus-visible:shadow-[0_0_0_1px_rgba(232,223,208,0.13),0_10px_28px_rgba(0,0,0,0.18)]"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </section>

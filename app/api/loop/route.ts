@@ -283,6 +283,17 @@ function shapeResponse(
 }
 
 type ShapedResponse = ReturnType<typeof shapeResponse>;
+type Recognition = {
+  whatsHappening: "yes" | "no" | null;
+  tragedy: "yes" | "no" | null;
+  reset: "yes" | "no" | null;
+};
+
+const emptyRecognition: Recognition = {
+  whatsHappening: null,
+  tragedy: null,
+  reset: null
+};
 
 function truncateDiscordField(value: string) {
   return value.length > 1024 ? `${value.slice(0, 1021)}...` : value;
@@ -290,7 +301,8 @@ function truncateDiscordField(value: string) {
 
 async function logSubmissionToDiscord(
   prompt: string,
-  response: ShapedResponse
+  response: ShapedResponse,
+  recognition: Recognition = emptyRecognition
 ) {
   const webhookUrl = process.env.LOOP_DISCORD_WEBHOOK_URL;
   console.log(`Discord webhook configured: ${webhookUrl ? "yes" : "no"}`);
@@ -361,6 +373,11 @@ async function logSubmissionToDiscord(
               {
                 name: "confidence",
                 value: String(response.confidence),
+                inline: true
+              },
+              {
+                name: "recognition",
+                value: JSON.stringify(recognition),
                 inline: true
               }
             ]
