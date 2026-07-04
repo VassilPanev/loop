@@ -87,6 +87,7 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
   const [currentHostname, setCurrentHostname] = useState("");
   const audioContextRef = useRef<AudioContext | null>(null);
   const closeLoopRef = useRef<() => void>(() => undefined);
+  const promptInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const hasResponse = useMemo(() => Boolean(response), [response]);
   const isLanding = mode === "landing";
@@ -147,6 +148,18 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
       }
     };
   }, [input.length, mode]);
+
+  useEffect(() => {
+    if (mode !== "loop" || visualMode !== "infrastructure" || response) {
+      return;
+    }
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      promptInputRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(focusFrame);
+  }, [mode, response, visualMode]);
 
   useEffect(() => {
     if (
@@ -403,27 +416,28 @@ export default function LoopSurface({ initialMode = "landing" }: { initialMode?:
           >
             <textarea
               id="loop-prompt"
+              ref={promptInputRef}
               value={input}
               onChange={(event) => setInput(event.target.value)}
               className="min-h-48 w-full cursor-text resize-none rounded-xl border border-[#e8dfd0]/[0.13] bg-[#120f0d]/80 px-5 py-4 text-base font-normal leading-7 text-mist/86 caret-[#e8dfd0] outline-none transition-[background-color,border-color,box-shadow] duration-200 ease-in-out hover:border-[#e8dfd0]/[0.18] hover:bg-[#15110e]/84 focus:border-[#e8dfd0]/45 focus:bg-[#15110e]/88 focus:shadow-[0_0_0_1px_rgba(232,223,208,0.075)] sm:min-h-56"
             />
 
             <p
-              className={`mt-3 min-h-5 px-2 text-sm font-normal leading-5 text-muted/34 transition-opacity duration-300 ease-in-out ${
+              className={`loop-prompt-example mt-3 min-h-5 px-2 text-sm font-normal leading-5 text-muted/34 transition-opacity duration-300 ease-in-out ${
                 isPlaceholderVisible ? "opacity-100" : "opacity-0"
               }`}
             >
               &ldquo;{promptExamples[placeholderIndex]}&rdquo;
             </p>
 
-            <p className="mx-2 mt-4 border-t border-[#e8dfd0]/[0.045] pt-3 text-[11px] font-light leading-4 text-muted/30 sm:text-xs">
+            <p className="loop-privacy-notice mx-2 mt-4 border-t border-[#e8dfd0]/[0.045] pt-3 text-[11px] font-light leading-4 text-muted/30 sm:text-xs">
               Anonymous prompts are stored and reviewed to improve Loop.
               <br />
               Please do not include personal identifying information.
             </p>
 
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="min-h-6 text-sm font-normal text-[#c4b39c]/72">
+            <div className="loop-submit-row mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="loop-submit-error min-h-6 text-sm font-normal text-[#c4b39c]/72">
                 {error}
               </p>
               <button

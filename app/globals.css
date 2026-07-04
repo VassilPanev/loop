@@ -327,7 +327,38 @@ textarea {
   background: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
+  display: flex;
+  flex-direction: column;
   padding: 0 !important;
+}
+
+.infrastructure-mode form.loop-writing-box textarea {
+  order: 1;
+}
+
+.infrastructure-mode .loop-submit-row {
+  align-items: center;
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 0.55rem;
+  order: 3;
+}
+
+.infrastructure-mode .loop-submit-error {
+  margin-right: auto;
+}
+
+.infrastructure-mode .loop-submit-error:empty {
+  display: none;
+}
+
+.infrastructure-mode .loop-prompt-example {
+  margin-top: 0.35rem;
+  order: 2;
+}
+
+.infrastructure-mode .loop-privacy-notice {
+  order: 4;
 }
 
 .infrastructure-mode .infrastructure-response-stack {
